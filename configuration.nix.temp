@@ -1,0 +1,93 @@
+# Edit this configuration file to define what should be installed on
+# your /system. Help is available in the configuration.nix(5) man page, on
+# https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
+
+{ modulesPath, config, lib, pkgs, inputs,... }:
+let 
+  diskDevice = "/dev/sda";
+  sources = import ./npins;
+in
+{
+  imports = [
+  (modulesPath + "/profiles/qemu-guest.nix")
+    ./disko-config.nix
+    (sources.disko + "/module.nix")
+  ];
+  boot.loader.grub = {
+    devices = [diskDevice];
+    efiSupport = true;
+    efiInstallAsRemovable = true;
+  };
+
+  services.qemuGuest.enable = lib.mkDefault true; # Enable QEMU Guest for Proxmox
+
+  security.sudo.wheelNeedsPassword = false;
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  # Pick only one of the below networking options.
+ # networking = {
+ #   networkmanager.enable = true;
+ #   hostName = "nixos";
+ # };# Easiest to use and most distros use this by default.
+  # Set your time zone.
+  time.timeZone = "Europe/Stockholm";
+
+  services.nix-serve = {
+    enable = true;
+    secretKeyFile = "/var/cache-priv-key.pem";
+  };
+
+  services.nginx = {
+     enable = true;
+     recommendedProxySettings = true;
+     virtualHosts = {
+       # ... existing hosts config etc. ...
+       "binarycache.example.com" = {
+         locations."/".proxyPass = "http://${config.services.nix-serve.bindAddress}:${toString config.services.nix-serve.port}";
+       };
+     };
+  };
+  console = {
+     font = "Lat2-Terminus16";
+     keyMap = "sv-latin1";
+  };
+
+  services.xserver.xkb.layout = "sv-latin1";
+
+  programs.fish.enable = true;
+  # Define a user account. Don't forget to set a password with ‘passwd’.
+  users.users.daniel = {
+     isNormalUser = true;
+     extraGroups = [ "dialout" "docker" "wheel" "audio" ]; # Enable ‘sudo’ for the user.
+     shell = pkgs.fish;
+     openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMP/m/i4TGW2Yoz8Z52QjLa1UJ5118h5XLRwp1hpAQ9B daniel@nixos"
+     ];
+     packages = with pkgs; [
+       fish
+    ];
+  };
+
+  # List packages installed in system profile. To search, run:
+  # $ nix search wget
+  environment.systemPackages = with pkgs; [
+     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+     nix-serve
+     git
+     bash
+     python3
+  ];
+
+  virtualisation.docker = {
+    enable = true;
+    enableOnBoot =  true;
+  };
+
+  services.openssh = {
+    enable = true; 
+    settings.PubkeyAuthentication = true;
+    settings.PasswordAuthentication = true;
+  };
+
+  system.stateVersion = "24.05"; # Did you read the comment?
+
+}
