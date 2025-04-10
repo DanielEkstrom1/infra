@@ -66,6 +66,7 @@
         ./machines/Dionysus
         ./configuration.nix
         ./home.nix
+        ./services/postgres.nix
       ];
     };
   };
