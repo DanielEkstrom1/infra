@@ -5,8 +5,10 @@
   hostname,
   pkgs,
   inputs,
+  lib,
   ...
-}: {
+}: let
+in {
   networking.hostName = "${hostname}";
 
   # FIXME: change your shell here if you don't want zsh
@@ -18,7 +20,7 @@
   security.sudo.wheelNeedsPassword = false;
 
   services.qemuGuest.enable = lib.mkDefault true; # Enable QEMU Guest for Proxmox
-  users.users.root.openssh.authorizedKeys.keys = [(builtins.readFile ./id_ed25519)];
+  users.users.root.openssh.authorizedKeys.keys = [(builtins.readFile ./id_ed25519.pub)];
   users.users.${username} = {
     isNormalUser = true;
     # FIXME: change your shell here if you don't want zsh
@@ -42,12 +44,6 @@
     enable = true;
     settings.PubkeyAuthentication = true;
     settings.PasswordAuthentication = true;
-  };
-
-  home-manager.users.${username} = {
-    imports = [
-      ./home.nix
-    ];
   };
 
   system.stateVersion = "25.05";
@@ -76,15 +72,8 @@
         flake = inputs.nixpkgs;
       };
     };
-
-    nixPath = [
-      "nixpkgs=${inputs.nixpkgs.outPath}"
-      "nixos-config=/etc/nixos/configuration.nix"
-      "/nix/var/nix/profiles/per-user/root/channels"
-    ];
-
-    package = pkgs.nixFlakes;
-    extraOptions = ''experimental-features = nix-command flakes'';
+    package = pkgs.nix;
+    settings.experimental-features = ["nix-command" "flakes"];
 
     gc = {
       automatic = true;

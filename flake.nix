@@ -16,18 +16,18 @@
 
   outputs = {
     self,
-    inputs,
     nixpkgs,
     nixpkgs-unstable,
     disko,
     home-manager,
-  }: let
-    argsDefaults = {
+  } @ inputs: let
+    argDefaults = {
       inherit inputs self;
       channels = {
         inherit nixpkgs nixpkgs-unstable;
       };
     };
+
     mkNixosConfiguration = {
       system ? "x86_64-linux",
       hostname,
@@ -35,7 +35,7 @@
       args ? {},
       modules,
     }: let
-      specialArgs = argsDefaults // {inherit hostname username;} // args;
+      specialArgs = argDefaults // {inherit hostname username;};
     in
       nixpkgs.lib.nixosSystem {
         inherit system specialArgs;
@@ -46,21 +46,26 @@
           ++ modules;
       };
   in {
+    formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
+
     nixosConfigurations.hades = mkNixosConfiguration {
       hostname = "hades-nixos";
       username = "hades";
       modules = [
         disko.nixosModules.disko
+        ./machines/Hades
         ./configuration.nix
+        ./home.nix
       ];
     };
-    nixosConfiguartions.dionysus = mkNixosConfiguration {
+    nixosConfigurations.dionysus = mkNixosConfiguration {
       hostname = "dio-nixos";
       username = "dionysus";
       modules = [
         disko.nixosModules.disko
         ./machines/Dionysus
         ./configuration.nix
+        ./home.nix
       ];
     };
   };
